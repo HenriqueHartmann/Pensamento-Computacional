@@ -9,11 +9,12 @@ int main()
     while (!fimdojogo)
     {
         // direcao = STOP; // Caso de queira que a cobra não se mova sozinha
+        sleep(0.1);
         desenha();
         entrada();
-        logica();	
+        logica();
     }
-    finaliza(); 
+    finaliza(); // Não cria nem lê arquivo records.txt
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
