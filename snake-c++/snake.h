@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <conio.h>
 #include <time.h>
+#include <string.h>
+#include <Windows.h>
 
 #define STOP 0
 #define ESQD 1
@@ -13,11 +15,14 @@
 #define MURO 178
 #define COBR 219
 #define FRUT 149
+#define sleep(x) Sleep(1000 * (x))
 
 int fimdojogo;
 const int largura = 20;
 const int altura = 20;
 int x, y, frutax, frutay, pontos, direcao;
+int rcobrax[100], rcobray[100];
+int tamrcobra;
 
 void inicializa() // Inicialização do jogo
 {
@@ -30,6 +35,7 @@ void inicializa() // Inicialização do jogo
     srand(time(&t));
     frutax = rand() % largura + 1;
     frutay = rand() % altura + 1;
+    tamrcobra = 0;
 }
 
 void desenha() // Apresentação da interface para o usuário
@@ -41,7 +47,7 @@ void desenha() // Apresentação da interface para o usuário
     // #             #
     // ######...######
 {
-    int i, j;
+    int i, j, k;
     system("cls");
 
     for (i = 0; i <= largura + 2; i++) // Imprime a primeira linha
@@ -69,7 +75,19 @@ void desenha() // Apresentação da interface para o usuário
                 {
                     printf("%c", char(FRUT));
                 }
-                else printf(" ");
+                else
+                {
+                    int flag = 0; // Falso
+                    for (k = 0; k < tamrcobra; k++)
+                    {
+                        if (rcobrax[k] == i && rcobray[k] == j)
+                        {
+                            printf("%c", char(COBR));
+                            flag = 1; // Verdadeiro
+                        }
+                    }
+                    if (!flag) printf(" ");
+                }
             }
         }
     }
@@ -150,6 +168,22 @@ void entrada() // Captura os dados do usuário
 
 void logica() // Executa a lógica do jogo
 {
+    int rcantx = rcobrax[0];
+    int rcanty = rcobray[0];
+    int auxx, auxy;
+
+    rcobrax[0] = x;
+    rcobray[0] = y;
+    for (int i = 1; i < tamrcobra; i++)
+    {
+        auxx = rcobrax[i];
+        auxy = rcobray[i];
+        rcobrax[i] = rcantx;
+        rcobray[i] = rcanty;
+        rcantx = auxx;
+        rcanty = auxy;
+    }
+
     switch (direcao)
     {
     case CIMA:
@@ -170,19 +204,98 @@ void logica() // Executa a lógica do jogo
     }
     if (x == 0 || x == largura + 2 || y == 0 || y == altura + 2)
     {
-        fimdojogo = 1;
+        fimdojogo = 1; // Verdadeiro
+    }
+    for (int i = 0; i < tamrcobra; i++)
+    {
+        if (rcobrax[i] == x && rcobray[i] == y)
+        {
+            fimdojogo = 1; // Verdadeiro
+        }
     }
     if (x == frutax && y == frutay)
     {
         pontos = pontos + 10;
         frutax = rand() % largura + 1;
         frutay = rand() % altura + 1;
+        tamrcobra++;
     }
 }
 
 void finaliza() // Finalização do jogo
 {
-    system("cls");
+    FILE* arquivo;
+    errno_t erro;
+    int leuok = 0; // Falso
+    char nome[20];
+
+    struct tprecords
+    {
+        char nome[20];
+        int pontos;
+    };
+
+    tprecords scores[5];
+
+    printf("\n Entre com seu Apelido: ");
+    scanf_s("%19s", nome, 20);
+
+    erro = fopen_s(&arquivo, "records.txt", "r");
+    if (erro)
+    {
+        printf("Erro ao tentar abrir o arquivo de records");
+    }
+    else
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            leuok = fscanf_s(arquivo, "%19s", &scores[i].nome, 20);
+            if (!leuok)
+            {
+                printf("Erro ao tentar ler o arquivo de records! na iteração %d", i);
+                break;
+            }
+            else
+            {
+                leuok = fscanf_s(arquivo, "%d", &scores[i].pontos);
+                if (!leuok)
+                {
+                    printf("Erro ao tentar ler o arquivo de records! na iteração %d", i);
+                    break;
+                }
+            }
+        }
+        fclose(arquivo);
+        if (leuok)
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                if (pontos > scores[i].pontos)
+                {
+                    for (int j = 4; j > i; j--)
+                    {
+                        scores[j].pontos = scores[j - 1].pontos;
+                        strcpy_s(scores[j].nome, scores[j - 1].nome);
+                    }
+                    scores[i].pontos = pontos;
+                    strcpy_s(scores[i].nome, nome);
+                    break;
+                }
+            }
+            erro = fopen_s(&arquivo, "records.txt", "w");
+            if (erro)
+            {
+                printf("Erro ao tentar abrir o arquivo de records!");
+            }
+            else
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    fprintf_s(arquivo, "%s %d\n", scores[i].nome, scores[i].pontos);
+                }
+            }
+            fclose(arquivo);
+        }
+    }
     printf("\n\n\n*** FIM DE JOGO ***\n\n\nSua pontuação foi: %d", pontos);
 }
-
